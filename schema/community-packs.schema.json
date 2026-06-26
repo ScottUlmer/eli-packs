@@ -1,0 +1,60 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://github.com/ScottUlmer/eli-packs/blob/main/schema/community-packs.schema.json",
+	"title": "ELI community pack catalog",
+	"type": "object",
+	"required": ["schema_version", "packs"],
+	"additionalProperties": false,
+	"properties": {
+		"schema_version": { "type": "integer", "const": 1 },
+		"generated_utc": { "type": "string" },
+		"packs": {
+			"type": "array",
+			"items": { "$ref": "#/definitions/pack" }
+		}
+	},
+	"definitions": {
+		"pack": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"pack_id", "title", "author", "description", "version",
+				"min_eli_version", "content_type", "download_url", "sha256"
+			],
+			"properties": {
+				"pack_id": {
+					"type": "string",
+					"pattern": "^[a-z0-9._-]+$",
+					"minLength": 1,
+					"maxLength": 128,
+					"description": "Unique id, lowercase slug. Must match the pack's manifest pack_id."
+				},
+				"title": { "type": "string", "minLength": 1, "maxLength": 120 },
+				"author": { "type": "string", "minLength": 1, "maxLength": 120 },
+				"description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+				"version": { "type": "string", "minLength": 1, "maxLength": 40 },
+				"min_eli_version": { "type": "string", "minLength": 1, "maxLength": 40 },
+				"content_type": { "type": "string", "enum": ["pack", "world"] },
+				"download_url": {
+					"type": "string",
+					"pattern": "^https://",
+					"description": "Public https URL to the .eli-pack bytes."
+				},
+				"sha256": {
+					"type": "string",
+					"pattern": "^[a-fA-F0-9]{64}$",
+					"description": "SHA-256 of the .eli-pack file. ELI verifies the download against this."
+				},
+				"size_bytes": { "type": "integer", "minimum": 0 },
+				"homepage": { "type": "string", "pattern": "^https://" },
+				"license": { "type": "string", "maxLength": 80 },
+				"tags": {
+					"type": "array",
+					"items": { "type": "string", "maxLength": 40 },
+					"maxItems": 16
+				},
+				"added_utc": { "type": "string" }
+			}
+		}
+	}
+}
