@@ -3,13 +3,13 @@
 	"generated_utc": "2026-06-27T00:00:00Z",
 	"packs": [
 		{
-			"pack_id": "special_cog.dnd-srd",
+			"pack_id": "eli.dnd-srd",
 			"title": "D&D SRD",
 			"author": "Scott",
 			"version": "1.0.0",
 			"description": "D&D SRD",
 			"content_type": "pack",
-			"download_url": "https://cdn.jsdelivr.net/gh/ScottUlmer/eli-packs@main/packs/special_cog.dnd-srd.eli-pack",
+			"download_url": "https://cdn.jsdelivr.net/gh/ScottUlmer/eli-packs@main/packs/eli.dnd-srd.eli-pack",
 			"sha256": "678a1224673f6dae19f912a40c91002eaa17a57deb6f88c4026d12e0619da489",
 			"size_bytes": 8776,
 			"tags": [],
