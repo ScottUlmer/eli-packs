@@ -1,0 +1,29 @@
+name: Validate catalog
+
+# Runs the validator on every PR and on pushes to main that touch the catalog,
+# schema, or scripts. A red X here means the catalog has a problem; merge only on green.
+on:
+  pull_request:
+    paths:
+      - "community-packs.json"
+      - "schema/**"
+      - "scripts/**"
+  push:
+    branches: [main]
+    paths:
+      - "community-packs.json"
+      - "schema/**"
+      - "scripts/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install jsonschema
+      - name: Validate community-packs.json
+        run: python scripts/validate_catalog.py

@@ -1,0 +1,40 @@
+name: Submit a pack
+description: Propose a pack for the ELI community Workshop.
+title: "[Pack] "
+labels: ["pack-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing a pack! In ELI, open **Tools → Prepare for Workshop…**, choose your
+        `.eli-pack`, fill in its **Download URL**, and press **Copy entry**. Paste that JSON below.
+
+        Your `.eli-pack` must already be hosted at a public **https** URL (a GitHub release, your
+        itch page, etc.) and `download_url` must point to it.
+  - type: textarea
+    id: entry
+    attributes:
+      label: Catalog entry (JSON)
+      description: The block ELI copied to your clipboard.
+      render: json
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: License / source
+      description: Confirm you have the right to share this (your own work, or an official SRD), and name the source.
+      placeholder: "e.g. My own content / D&D SRD 5.1 (CC-BY-4.0)"
+    validations:
+      required: true
+  - type: checkboxes
+    id: agree
+    attributes:
+      label: Checklist
+      options:
+        - label: My `.eli-pack` is hosted at a public https URL and `download_url` points to it.
+          required: true
+        - label: This is pure data (no code or macros) and I have the right to share it.
+          required: true
+        - label: I understand packs are curated and may be declined or removed.
+          required: true
