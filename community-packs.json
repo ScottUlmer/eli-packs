@@ -1,6 +1,6 @@
 {
 	"schema_version": 1,
-	"generated_utc": "2026-06-27T00:00:00Z",
+	"generated_utc": "2026-06-29T16:00:00Z",
 	"packs": [
 		{
 			"pack_id": "eli.dnd-srd",
@@ -13,6 +13,57 @@
 			"sha256": "678a1224673f6dae19f912a40c91002eaa17a57deb6f88c4026d12e0619da489",
 			"size_bytes": 8776,
 			"tags": [],
+			"min_eli_version": "2026.06.24.15"
+		},
+		{
+			"pack_id": "eli.ironsworn-srd",
+			"title": "Ironsworn SRD",
+			"author": "Shawn Tomkin / Scott",
+			"version": "1.0.0",
+			"description": "Rules, moves, and starter templates for the Ironsworn System Reference Document (CC-BY).",
+			"content_type": "pack",
+			"download_url": "https://cdn.jsdelivr.net/gh/ScottUlmer/eli-packs@main/packs/eli.ironsworn-srd.eli-pack",
+			"sha256": "e011c8d52aa2d4535653b1e4e50299fde39962f9a1ff379d6ebe66c229fc986a",
+			"size_bytes": 2816,
+			"tags": [
+				"ironsworn",
+				"srd",
+				"solo"
+			],
+			"min_eli_version": "2026.06.24.15"
+		},
+		{
+			"pack_id": "eli.traveller-srd",
+			"title": "Traveller 2.0 SRD",
+			"author": "Mongoose / Scott",
+			"version": "1.0.0",
+			"description": "Starter templates and reference data for the Traveller Science-Fiction RPG System Reference Document.",
+			"content_type": "pack",
+			"download_url": "https://cdn.jsdelivr.net/gh/ScottUlmer/eli-packs@main/packs/eli.traveller-srd.eli-pack",
+			"sha256": "0cd41609bc3bfa2f667eaca66230b7dc9badb93a5de8a0198d3b39187468ed56",
+			"size_bytes": 2286,
+			"tags": [
+				"traveller",
+				"srd",
+				"sci-fi"
+			],
+			"min_eli_version": "2026.06.24.15"
+		},
+		{
+			"pack_id": "eli.swade-srd",
+			"title": "SWADE SRD",
+			"author": "Pinnacle Entertainment / Scott",
+			"version": "1.0.0",
+			"description": "Starter templates and reference data for the Savage Worlds Adventure Edition (SWADE) System Reference Document.",
+			"content_type": "pack",
+			"download_url": "https://cdn.jsdelivr.net/gh/ScottUlmer/eli-packs@main/packs/eli.swade-srd.eli-pack",
+			"sha256": "6c0415c5fb7e874c9269bb85424a75e762ba5dc2b4a1beefe80550417c587725",
+			"size_bytes": 2138,
+			"tags": [
+				"swade",
+				"srd",
+				"savage-worlds"
+			],
 			"min_eli_version": "2026.06.24.15"
 		}
 	]
