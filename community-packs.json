@@ -1,6 +1,6 @@
 {
 	"schema_version": 1,
-	"generated_utc": "2026-07-02T20:00:00Z",
+	"generated_utc": "2026-07-03T02:00:00Z",
 	"packs": [
 		{
 			"pack_id": "eli.dnd-srd",
@@ -17,10 +17,10 @@
 		},
 		{
 			"pack_id": "eli.ironsworn-srd",
-			"title": "Ironsworn SRD",
+			"title": "Ironsworn SRD Templates (reference only)",
 			"author": "Shawn Tomkin / Scott",
 			"version": "1.0.0",
-			"description": "Rules, moves, and starter templates for the Ironsworn System Reference Document (CC-BY).",
+			"description": "Starter reference templates for the Ironsworn System Reference Document (CC-BY). Reference content only - this pack has no solo ruleset and will not appear in the Play tab. For solo play install 'Ironsworn' (eli.ironsworn) instead.",
 			"content_type": "pack",
 			"download_url": "https://cdn.jsdelivr.net/gh/ScottUlmer/eli-packs@main/packs/eli.ironsworn-srd.eli-pack",
 			"sha256": "e011c8d52aa2d4535653b1e4e50299fde39962f9a1ff379d6ebe66c229fc986a",
@@ -28,7 +28,8 @@
 			"tags": [
 				"ironsworn",
 				"srd",
-				"solo"
+				"reference",
+				"templates"
 			],
 			"min_eli_version": "2026.06.24.15"
 		},
