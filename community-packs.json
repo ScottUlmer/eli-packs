@@ -68,6 +68,24 @@
 			"min_eli_version": "2026.06.24.15"
 		},
 		{
+			"pack_id": "eli.generators",
+			"title": "ELI Generators",
+			"author": "Scott",
+			"version": "1.0.0",
+			"description": "System-neutral random generator tables - NPCs, dungeons, factions, settlements, adventure hooks, weather, and treasure. 27 tables, 438 entries, all original ELI content. No solo ruleset - these roll from the Play tab's oracle browser in any world.",
+			"content_type": "pack",
+			"download_url": "https://cdn.jsdelivr.net/gh/ScottUlmer/eli-packs@main/packs/eli.generators.eli-pack",
+			"sha256": "5ceb90f95ddfcd9b192e093707bf9e5d5c696319444322d33bf67d8c8eece161",
+			"size_bytes": 8526,
+			"tags": [
+				"generators",
+				"system-neutral",
+				"tables",
+				"gm-tools"
+			],
+			"min_eli_version": "2026.06.24.15"
+		},
+		{
 			"pack_id": "eli.ironsworn",
 			"title": "Ironsworn",
 			"author": "Shawn Tomkin (game) / Scott (pack)",
