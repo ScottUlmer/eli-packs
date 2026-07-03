@@ -1,6 +1,6 @@
 {
 	"schema_version": 1,
-	"generated_utc": "2026-06-29T16:00:00Z",
+	"generated_utc": "2026-07-02T20:00:00Z",
 	"packs": [
 		{
 			"pack_id": "eli.dnd-srd",
@@ -63,6 +63,24 @@
 				"swade",
 				"srd",
 				"savage-worlds"
+			],
+			"min_eli_version": "2026.06.24.15"
+		},
+		{
+			"pack_id": "eli.ironsworn",
+			"title": "Ironsworn",
+			"author": "Shawn Tomkin (game) / Scott (pack)",
+			"version": "1.0.0",
+			"description": "Playable classic Ironsworn ruleset: 38 oracle tables, 35 moves, 78 asset cards (CC BY 4.0, data via Datasworn), plus an original starter setting. Install and press Start a solo game.",
+			"content_type": "pack",
+			"download_url": "https://cdn.jsdelivr.net/gh/ScottUlmer/eli-packs@main/packs/eli.ironsworn.eli-pack",
+			"sha256": "f2572148ff7ec12b0b2ce00697adca45ac44a5716ce71d3240cb7ce5a01d45fc",
+			"size_bytes": 30512,
+			"tags": [
+				"ironsworn",
+				"solo",
+				"ruleset",
+				"playable"
 			],
 			"min_eli_version": "2026.06.24.15"
 		}
