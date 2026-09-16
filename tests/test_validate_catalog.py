@@ -3,7 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # Import functions from validate_catalog
 from scripts.validate_catalog import (
@@ -79,6 +79,86 @@ class TestValidateCatalog(unittest.TestCase):
         _check_entry_integrity(entry, 0, errors)
         self.assertTrue(any("sha256 mismatch" in e for e in errors))
         self.assertTrue(any("size_bytes mismatch" in e for e in errors))
+
+    def test_check_entry_integrity_missing_pack_id_fallback(self):
+        errors = []
+        entry = {
+            "download_url": "http://example.com/pack.eli-pack",
+        }
+        _check_entry_integrity(entry, 42, errors)
+        self.assertTrue(any("'(entry #42)'" in e for e in errors))
+
+    def test_check_entry_integrity_non_https_store_url(self):
+        errors = []
+        entry = {
+            "pack_id": "test.store",
+            "download_url": "https://example.com/pack.eli-pack",
+            "store_url": "http://example.com/store",
+        }
+        _check_entry_integrity(entry, 0, errors)
+        self.assertTrue(any("'test.store': store_url must be an https:// URL" in e for e in errors))
+
+    def test_check_entry_integrity_external_pack(self):
+        errors = []
+        entry = {
+            "pack_id": "test.external",
+            "download_url": "https://external-host.com/pack.eli-pack",
+            "sha256": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            "size_bytes": 100,
+        }
+        with patch("scripts.validate_catalog._local_file_for_url", return_value=None):
+            _check_entry_integrity(entry, 0, errors)
+        self.assertEqual(len(errors), 0)
+
+    def test_check_entry_integrity_mocked_valid(self):
+        errors = []
+        entry = {
+            "pack_id": "test.valid",
+            "download_url": "https://example.com/test.eli-pack",
+            "sha256": "ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890",  # uppercase in catalog
+            "size_bytes": 500,
+        }
+        fake_file = MagicMock()
+        fake_file.name = "test.eli-pack"
+        fake_file.stat.return_value.st_size = 500
+
+        with patch("scripts.validate_catalog._local_file_for_url", return_value=fake_file), \
+             patch("scripts.validate_catalog._sha256_of_file", return_value="abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"):
+            _check_entry_integrity(entry, 0, errors)
+
+        self.assertEqual(len(errors), 0)
+
+    def test_check_entry_integrity_mocked_mismatches(self):
+        errors = []
+        entry = {
+            "pack_id": "test.mismatch",
+            "download_url": "https://example.com/test.eli-pack",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "size_bytes": 100,
+        }
+        fake_file = MagicMock()
+        fake_file.name = "test.eli-pack"
+        fake_file.stat.return_value.st_size = 200
+
+        with patch("scripts.validate_catalog._local_file_for_url", return_value=fake_file), \
+             patch("scripts.validate_catalog._sha256_of_file", return_value="2222222222222222222222222222222222222222222222222222222222222222"):
+            _check_entry_integrity(entry, 0, errors)
+
+        self.assertEqual(len(errors), 2)
+        self.assertTrue(any("sha256 mismatch" in e for e in errors))
+        self.assertTrue(any("size_bytes mismatch" in e for e in errors))
+
+        # Test when size_bytes is not specified or not an int
+        errors.clear()
+        entry_no_size = {
+            "pack_id": "test.mismatch",
+            "download_url": "https://example.com/test.eli-pack",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        }
+        with patch("scripts.validate_catalog._local_file_for_url", return_value=fake_file), \
+             patch("scripts.validate_catalog._sha256_of_file", return_value="2222222222222222222222222222222222222222222222222222222222222222"):
+            _check_entry_integrity(entry_no_size, 0, errors)
+        self.assertEqual(len(errors), 0)
 
     def test_main_valid_catalog(self):
         self.assertEqual(main(), 0)
