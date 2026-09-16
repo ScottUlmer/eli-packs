@@ -16,6 +16,7 @@ submission can't be merged. Checks:
      by ELI on download.
 """
 
+import functools
 import hashlib
 import json
 import sys
@@ -33,6 +34,7 @@ SCHEMA = ROOT / "schema" / "community-packs.schema.json"
 PACKS_DIR = ROOT / "packs"
 
 
+@functools.lru_cache
 def _sha256_of_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
