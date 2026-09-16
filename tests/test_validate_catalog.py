@@ -94,6 +94,27 @@ class TestValidateCatalog(unittest.TestCase):
         finally:
             tmp_path.unlink()
 
+    def test_main_catalog_file_not_found(self):
+        missing_path = Path("/nonexistent/community-packs.json")
+        with patch("scripts.validate_catalog.CATALOG", missing_path):
+            self.assertEqual(main(), 1)
+
+    def test_main_schema_invalid_json(self):
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write("{ invalid schema json")
+            tmp_path = Path(tmp.name)
+
+        try:
+            with patch("scripts.validate_catalog.SCHEMA", tmp_path):
+                self.assertEqual(main(), 1)
+        finally:
+            tmp_path.unlink()
+
+    def test_main_schema_file_not_found(self):
+        missing_path = Path("/nonexistent/community-packs.schema.json")
+        with patch("scripts.validate_catalog.SCHEMA", missing_path):
+            self.assertEqual(main(), 1)
+
     def test_main_schema_error(self):
         with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
             tmp.write(json.dumps({"schema_version": 1, "packs": [{"invalid": "pack"}]}))

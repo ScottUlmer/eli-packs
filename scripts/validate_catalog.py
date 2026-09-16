@@ -103,13 +103,13 @@ def main() -> int:
 
     try:
         catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (FileNotFoundError, json.JSONDecodeError, OSError) as exc:
         print(f"ERROR: community-packs.json is not valid JSON: {exc}")
         return 1
 
     try:
         schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (FileNotFoundError, json.JSONDecodeError, OSError) as exc:
         print(f"ERROR: schema is not valid JSON: {exc}")
         return 1
 
