@@ -40,6 +40,46 @@ class TestValidateCatalog(unittest.TestCase):
         self.assertTrue(local_file.is_file())
         self.assertEqual(local_file.name, "eli.dnd-srd.eli-pack")
 
+    def test_local_file_for_url_non_string_inputs(self):
+        non_string_inputs = [None, 123, 45.67, True, False, ["https://example.com"], {"url": "http"}]
+        for invalid_input in non_string_inputs:
+            with self.subTest(invalid_input=invalid_input):
+                self.assertIsNone(_local_file_for_url(invalid_input))
+
+    def test_local_file_for_url_mocked_packs_dir(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_packs = Path(tmpdir)
+
+            # Create a file in temp packs dir
+            file_name = "test-pack.eli-pack"
+            test_file = tmp_packs / file_name
+            test_file.write_text("dummy pack content")
+
+            # Create a directory in temp packs dir
+            dir_name = "test-dir.eli-pack"
+            test_dir = tmp_packs / dir_name
+            test_dir.mkdir()
+
+            with patch("scripts.validate_catalog.PACKS_DIR", tmp_packs):
+                # 1. Existing file match
+                matched = _local_file_for_url(f"https://example.com/downloads/{file_name}")
+                self.assertEqual(matched, test_file)
+
+                # 2. URL with trailing slash matching existing file
+                matched_slash = _local_file_for_url(f"https://example.com/downloads/{file_name}/")
+                self.assertEqual(matched_slash, test_file)
+
+                # 3. Candidate is a directory, not a file
+                self.assertIsNone(_local_file_for_url(f"https://example.com/downloads/{dir_name}"))
+
+                # 4. Nonexistent file
+                self.assertIsNone(_local_file_for_url("https://example.com/downloads/missing.eli-pack"))
+
+                # 5. Empty or slash-only URLs
+                self.assertIsNone(_local_file_for_url(""))
+                self.assertIsNone(_local_file_for_url("/"))
+                self.assertIsNone(_local_file_for_url("///"))
+
     def test_check_entry_integrity_paid_linkout(self):
         errors = []
         paid_entry = {
