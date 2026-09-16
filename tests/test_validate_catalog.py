@@ -68,6 +68,34 @@ class TestValidateCatalog(unittest.TestCase):
         _check_entry_integrity(entry, 0, errors)
         self.assertTrue(any("download_url must be an https:// URL" in e for e in errors))
 
+    def test_check_entry_integrity_invalid_store_url_with_download_url(self):
+        errors = []
+        entry = {
+            "pack_id": "test.invalid_store",
+            "download_url": "https://example.com/pack.eli-pack",
+            "store_url": "http://example.com/store",
+        }
+        _check_entry_integrity(entry, 0, errors)
+        self.assertTrue(any("store_url must be an https:// URL" in e for e in errors))
+
+    def test_check_entry_integrity_matching_local_file(self):
+        errors = []
+        dnd_url = "https://github.com/ScottUlmer/eli-community-packs/releases/download/v1.0.0/eli.dnd-srd.eli-pack"
+        local_file = _local_file_for_url(dnd_url)
+        self.assertIsNotNone(local_file)
+
+        content_sha256 = _sha256_of_file(local_file)
+        content_size = local_file.stat().st_size
+
+        entry = {
+            "pack_id": "eli.dnd-srd",
+            "download_url": dnd_url,
+            "sha256": content_sha256,
+            "size_bytes": content_size,
+        }
+        _check_entry_integrity(entry, 0, errors)
+        self.assertEqual(len(errors), 0)
+
     def test_check_entry_integrity_sha256_size_mismatch(self):
         errors = []
         entry = {
@@ -94,9 +122,35 @@ class TestValidateCatalog(unittest.TestCase):
         finally:
             tmp_path.unlink()
 
+    def test_main_invalid_schema_json(self):
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write("{ invalid json")
+            tmp_schema_path = Path(tmp.name)
+
+        try:
+            with patch("scripts.validate_catalog.SCHEMA", tmp_schema_path):
+                self.assertEqual(main(), 1)
+        finally:
+            tmp_schema_path.unlink()
+
     def test_main_schema_error(self):
         with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
             tmp.write(json.dumps({"schema_version": 1, "packs": [{"invalid": "pack"}]}))
+            tmp_path = Path(tmp.name)
+
+        try:
+            with patch("scripts.validate_catalog.CATALOG", tmp_path):
+                self.assertEqual(main(), 1)
+        finally:
+            tmp_path.unlink()
+
+    def test_main_non_dict_pack_item(self):
+        catalog_data = {
+            "schema_version": 1,
+            "packs": ["not a dict"],
+        }
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write(json.dumps(catalog_data))
             tmp_path = Path(tmp.name)
 
         try:
