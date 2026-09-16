@@ -28,6 +28,44 @@ class TestValidateCatalog(unittest.TestCase):
         finally:
             tmp_path.unlink()
 
+    def test_sha256_of_empty_file(self):
+        content = b""
+        expected = hashlib.sha256(content).hexdigest()
+
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+
+        try:
+            self.assertEqual(_sha256_of_file(tmp_path), expected)
+        finally:
+            tmp_path.unlink()
+
+    def test_sha256_of_file_exact_chunk_size(self):
+        content = b"A" * 65536
+        expected = hashlib.sha256(content).hexdigest()
+
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(content)
+            tmp_path = Path(tmp.name)
+
+        try:
+            self.assertEqual(_sha256_of_file(tmp_path), expected)
+        finally:
+            tmp_path.unlink()
+
+    def test_sha256_of_file_multichunk(self):
+        content = b"B" * (65536 * 2 + 1024)
+        expected = hashlib.sha256(content).hexdigest()
+
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(content)
+            tmp_path = Path(tmp.name)
+
+        try:
+            self.assertEqual(_sha256_of_file(tmp_path), expected)
+        finally:
+            tmp_path.unlink()
+
     def test_local_file_for_url(self):
         self.assertIsNone(_local_file_for_url(""))
         self.assertIsNone(_local_file_for_url(None))
