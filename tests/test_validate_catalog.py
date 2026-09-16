@@ -89,8 +89,25 @@ class TestValidateCatalog(unittest.TestCase):
             tmp_path = Path(tmp.name)
 
         try:
-            with patch("scripts.validate_catalog.CATALOG", tmp_path):
+            with patch("scripts.validate_catalog.CATALOG", tmp_path), patch("sys.stdout") as mock_stdout:
                 self.assertEqual(main(), 1)
+                printed_text = "".join(call.args[0] for call in mock_stdout.write.call_args_list)
+                self.assertIn("ERROR: community-packs.json is not valid JSON or could not be read.", printed_text)
+                self.assertNotIn("Expecting property name enclosed in double quotes", printed_text)
+        finally:
+            tmp_path.unlink()
+
+    def test_main_invalid_schema_json(self):
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write("{ invalid json")
+            tmp_path = Path(tmp.name)
+
+        try:
+            with patch("scripts.validate_catalog.SCHEMA", tmp_path), patch("sys.stdout") as mock_stdout:
+                self.assertEqual(main(), 1)
+                printed_text = "".join(call.args[0] for call in mock_stdout.write.call_args_list)
+                self.assertIn("ERROR: schema is not valid JSON or could not be read.", printed_text)
+                self.assertNotIn("Expecting property name enclosed in double quotes", printed_text)
         finally:
             tmp_path.unlink()
 
