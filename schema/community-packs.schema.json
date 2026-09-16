@@ -19,7 +19,7 @@
 			"additionalProperties": false,
 			"required": [
 				"pack_id", "title", "author", "description", "version",
-				"min_eli_version", "content_type", "download_url", "sha256"
+				"min_eli_version", "content_type"
 			],
 			"properties": {
 				"pack_id": {
@@ -47,6 +47,15 @@
 				},
 				"size_bytes": { "type": "integer", "minimum": 0 },
 				"homepage": { "type": "string", "pattern": "^https://" },
+				"store_url": {
+					"type": "string",
+					"pattern": "^https://",
+					"description": "Store or purchase URL for paid entries."
+				},
+				"paid": {
+					"type": "boolean",
+					"description": "True if this entry is a paid pack."
+				},
 				"license": { "type": "string", "maxLength": 80 },
 				"tags": {
 					"type": "array",
@@ -54,7 +63,23 @@
 					"maxItems": 16
 				},
 				"added_utc": { "type": "string" }
-			}
+			},
+			"oneOf": [
+				{
+					"description": "Standard byte-serving pack entry",
+					"required": ["download_url", "sha256"]
+				},
+				{
+					"description": "Paid link-out pack entry",
+					"required": ["paid", "store_url"],
+					"properties": {
+						"paid": { "const": true }
+					},
+					"not": {
+						"required": ["download_url"]
+					}
+				}
+			]
 		}
 	}
 }
