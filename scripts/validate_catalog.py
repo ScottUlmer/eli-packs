@@ -56,6 +56,143 @@ def _local_file_for_url(url: str):
     return None
 
 
+MAX_ZIP_ENTRIES = 10000
+MAX_ZIP_TOTAL_UNCOMPRESSED_SIZE = 500 * 1024 * 1024  # 500 MB
+MAX_MANIFEST_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+def _is_safe_member_path(name: str) -> bool:
+    """Check if zip member path is safe (no zip slip, absolute paths, or escaping)."""
+    if not name:
+        return True
+    if name.startswith("/") or name.startswith("\\") or ":" in name:
+        return False
+    # Standardize path separators to /
+    normalized = name.replace("\\", "/")
+    parts = normalized.split("/")
+    for part in parts:
+        if part == "..":
+            return False
+    return True
+
+
+def _validate_pack_archive(local_file: Path, pack: dict) -> list[str]:
+    """Inspect local .eli-pack zip file bounds, member safety, and manifest identity."""
+    errors: list[str] = []
+    pack_id = pack.get("pack_id", local_file.name)
+
+    import zipfile
+
+    if not zipfile.is_zipfile(local_file):
+        errors.append(f"'{pack_id}': local file {local_file.name} is not a valid zip archive")
+        return errors
+
+    try:
+        with zipfile.ZipFile(local_file, "r") as z:
+            infolist = z.infolist()
+            if len(infolist) > MAX_ZIP_ENTRIES:
+                errors.append(
+                    f"'{pack_id}': archive exceeds entry limit ({len(infolist)} > {MAX_ZIP_ENTRIES})"
+                )
+                return errors
+
+            total_uncompressed = sum(info.file_size for info in infolist)
+            if total_uncompressed > MAX_ZIP_TOTAL_UNCOMPRESSED_SIZE:
+                errors.append(
+                    f"'{pack_id}': archive exceeds uncompressed size limit "
+                    f"({total_uncompressed} > {MAX_ZIP_TOTAL_UNCOMPRESSED_SIZE} bytes)"
+                )
+                return errors
+
+            # Validate path safety and check for duplicate/ambiguous member names
+            seen_names = set()
+            manifest_candidates = []
+
+            for info in infolist:
+                member_name = info.filename
+                if not _is_safe_member_path(member_name):
+                    errors.append(
+                        f"'{pack_id}': archive contains unsafe member path '{member_name}'"
+                    )
+
+                # Track duplicates
+                if member_name in seen_names:
+                    errors.append(
+                        f"'{pack_id}': archive contains duplicate entry '{member_name}'"
+                    )
+                seen_names.add(member_name)
+
+                # Track manifest candidates (case-insensitive or ending with manifest.json)
+                norm_lower = member_name.replace("\\", "/").lower()
+                if norm_lower == "manifest.json" or norm_lower.endswith("/manifest.json"):
+                    manifest_candidates.append(member_name)
+
+            if "manifest.json" not in seen_names:
+                errors.append(f"'{pack_id}': archive is missing root 'manifest.json'")
+                return errors
+
+            if len(manifest_candidates) != 1 or manifest_candidates[0] != "manifest.json":
+                errors.append(
+                    f"'{pack_id}': archive contains ambiguous or duplicate manifest entries ({manifest_candidates})"
+                )
+                return errors
+
+            # Read and parse manifest.json
+            manifest_info = z.getinfo("manifest.json")
+            if manifest_info.file_size > MAX_MANIFEST_SIZE:
+                errors.append(
+                    f"'{pack_id}': manifest.json exceeds size limit "
+                    f"({manifest_info.file_size} > {MAX_MANIFEST_SIZE} bytes)"
+                )
+                return errors
+
+            try:
+                manifest_data = z.read("manifest.json").decode("utf-8")
+                manifest = json.loads(manifest_data)
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"'{pack_id}': failed to parse manifest.json: {exc}")
+                return errors
+
+            if not isinstance(manifest, dict):
+                errors.append(f"'{pack_id}': manifest.json root must be a JSON object")
+                return errors
+
+            # Cross-check pack_id
+            m_pack_id = manifest.get("pack_id")
+            cat_pack_id = pack.get("pack_id")
+            if m_pack_id != cat_pack_id:
+                errors.append(
+                    f"'{pack_id}': manifest pack_id mismatch — "
+                    f"catalog says '{cat_pack_id}', manifest says '{m_pack_id}'"
+                )
+
+            # Cross-check version (check pack_version first, then version)
+            m_version = manifest.get("pack_version") or manifest.get("version")
+            cat_version = pack.get("version")
+            if m_version != cat_version:
+                errors.append(
+                    f"'{pack_id}': manifest version mismatch — "
+                    f"catalog says '{cat_version}', manifest says '{m_version}'"
+                )
+
+            # Cross-check content_type if present in manifest
+            if "content_type" in manifest:
+                m_content_type = manifest.get("content_type")
+                cat_content_type = pack.get("content_type")
+                if m_content_type != cat_content_type:
+                    errors.append(
+                        f"'{pack_id}': manifest content_type mismatch — "
+                        f"catalog says '{cat_content_type}', manifest says '{m_content_type}'"
+                    )
+
+    except zipfile.BadZipFile:
+        errors.append(f"'{pack_id}': corrupted zip archive {local_file.name}")
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"'{pack_id}': error reading archive {local_file.name}: {exc}")
+
+    return errors
+
+
 def _check_entry_integrity(pack: dict, index: int, errors: list) -> None:
     pack_id = pack.get("pack_id", f"(entry #{index})")
     download_url = pack.get("download_url", "")
@@ -96,6 +233,10 @@ def _check_entry_integrity(pack: dict, index: int, errors: list) -> None:
             f"'{pack_id}': size_bytes mismatch — catalog says {expected_size}, "
             f"{local_file.name} is {actual_size}"
         )
+
+    # Validate archive manifest and member safety
+    archive_errors = _validate_pack_archive(local_file, pack)
+    errors.extend(archive_errors)
 
 
 def main() -> int:

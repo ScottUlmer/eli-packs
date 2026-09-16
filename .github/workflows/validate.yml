@@ -8,12 +8,14 @@ on:
       - "community-packs.json"
       - "schema/**"
       - "scripts/**"
+      - "tests/**"
   push:
     branches: [main]
     paths:
       - "community-packs.json"
       - "schema/**"
       - "scripts/**"
+      - "tests/**"
 
 jobs:
   validate:
@@ -24,6 +26,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install jsonschema
+        run: pip install jsonschema pytest
       - name: Validate community-packs.json
         run: python scripts/validate_catalog.py
+      - name: Run test suite
+        run: pytest
