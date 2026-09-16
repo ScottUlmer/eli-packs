@@ -1,9 +1,11 @@
+import io
 import hashlib
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # Import functions from validate_catalog
 from scripts.validate_catalog import (
@@ -83,16 +85,41 @@ class TestValidateCatalog(unittest.TestCase):
     def test_main_valid_catalog(self):
         self.assertEqual(main(), 0)
 
-    def test_main_invalid_json(self):
-        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
-            tmp.write("{ invalid json")
-            tmp_path = Path(tmp.name)
-
-        try:
-            with patch("scripts.validate_catalog.CATALOG", tmp_path):
+    def test_main_catalog_invalid_json(self):
+        mock_catalog = MagicMock()
+        mock_catalog.read_text.return_value = "{ invalid json"
+        with patch("scripts.validate_catalog.CATALOG", mock_catalog):
+            f = io.StringIO()
+            with redirect_stdout(f):
                 self.assertEqual(main(), 1)
-        finally:
-            tmp_path.unlink()
+            self.assertIn("ERROR: community-packs.json is not valid JSON:", f.getvalue())
+
+    def test_main_catalog_read_exception(self):
+        mock_catalog = MagicMock()
+        mock_catalog.read_text.side_effect = OSError("Disk read error")
+        with patch("scripts.validate_catalog.CATALOG", mock_catalog):
+            f = io.StringIO()
+            with redirect_stdout(f):
+                self.assertEqual(main(), 1)
+            self.assertIn("ERROR: community-packs.json is not valid JSON: Disk read error", f.getvalue())
+
+    def test_main_schema_invalid_json(self):
+        mock_schema = MagicMock()
+        mock_schema.read_text.return_value = "{ invalid json"
+        with patch("scripts.validate_catalog.SCHEMA", mock_schema):
+            f = io.StringIO()
+            with redirect_stdout(f):
+                self.assertEqual(main(), 1)
+            self.assertIn("ERROR: schema is not valid JSON:", f.getvalue())
+
+    def test_main_schema_read_exception(self):
+        mock_schema = MagicMock()
+        mock_schema.read_text.side_effect = OSError("Schema file missing")
+        with patch("scripts.validate_catalog.SCHEMA", mock_schema):
+            f = io.StringIO()
+            with redirect_stdout(f):
+                self.assertEqual(main(), 1)
+            self.assertIn("ERROR: schema is not valid JSON: Schema file missing", f.getvalue())
 
     def test_main_schema_error(self):
         with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
