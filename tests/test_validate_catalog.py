@@ -105,6 +105,59 @@ class TestValidateCatalog(unittest.TestCase):
         finally:
             tmp_path.unlink()
 
+    def test_main_paid_linkout_valid(self):
+        catalog_data = {
+            "schema_version": 1,
+            "packs": [
+                {
+                    "pack_id": "test.paid",
+                    "title": "Paid Pack",
+                    "author": "Author",
+                    "description": "Desc",
+                    "version": "1.0.0",
+                    "min_eli_version": "2026.01.01",
+                    "content_type": "pack",
+                    "paid": True,
+                    "store_url": "https://store.example.com/pack",
+                }
+            ],
+        }
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write(json.dumps(catalog_data))
+            tmp_path = Path(tmp.name)
+
+        try:
+            with patch("scripts.validate_catalog.CATALOG", tmp_path):
+                self.assertEqual(main(), 0)
+        finally:
+            tmp_path.unlink()
+
+    def test_main_incomplete_free_entry(self):
+        catalog_data = {
+            "schema_version": 1,
+            "packs": [
+                {
+                    "pack_id": "test.free",
+                    "title": "Free Pack",
+                    "author": "Author",
+                    "description": "Desc",
+                    "version": "1.0.0",
+                    "min_eli_version": "2026.01.01",
+                    "content_type": "pack",
+                    # Missing download_url and sha256
+                }
+            ],
+        }
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write(json.dumps(catalog_data))
+            tmp_path = Path(tmp.name)
+
+        try:
+            with patch("scripts.validate_catalog.CATALOG", tmp_path):
+                self.assertEqual(main(), 1)
+        finally:
+            tmp_path.unlink()
+
     def test_main_duplicate_pack_id(self):
         catalog_data = {
             "schema_version": 1,
