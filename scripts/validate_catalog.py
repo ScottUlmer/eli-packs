@@ -103,14 +103,14 @@ def main() -> int:
 
     try:
         catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: community-packs.json is not valid JSON: {exc}")
+    except (json.JSONDecodeError, OSError):
+        print("ERROR: community-packs.json is not valid JSON or could not be read.")
         return 1
 
     try:
         schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: schema is not valid JSON: {exc}")
+    except (json.JSONDecodeError, OSError):
+        print("ERROR: schema is not valid JSON or could not be read.")
         return 1
 
     validator = Draft7Validator(schema)
