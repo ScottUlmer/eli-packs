@@ -15,13 +15,14 @@ from scripts.validate_catalog import (
 )
 
 
-def _create_zip_bytes(files_dict):
-    """Utility to create an in-memory zip file from a dict of {filename: content}."""
+def _create_zip_bytes(files_entries):
+    """Utility to create an in-memory zip file from a list or dict of (filename, content) tuples/pairs."""
     import io
 
     buf = io.BytesIO()
+    items = files_entries.items() if isinstance(files_entries, dict) else files_entries
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for name, content in files_dict.items():
+        for name, content in items:
             if isinstance(content, str):
                 content = content.encode("utf-8")
             zf.writestr(name, content)
@@ -126,12 +127,13 @@ class TestValidateCatalog(unittest.TestCase):
             pack = {"pack_id": "test.pack", "version": "1.0.0", "content_type": "pack"}
             _inspect_archive_and_manifest(tmp_path, pack, "test.pack", errors)
             self.assertTrue(any("failed to open zip archive" in e for e in errors))
+            self.assertFalse(any("Traceback" in e or "Exception" in e for e in errors))
         finally:
             tmp_path.unlink()
 
     def test_archive_inspection_excessive_entries(self):
         errors = []
-        files = {f"file_{i}.txt": "data" for i in range(105)}
+        files = [(f"file_{i}.txt", "data") for i in range(105)]
         zip_bytes = _create_zip_bytes(files)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".eli-pack") as tmp:
@@ -149,7 +151,7 @@ class TestValidateCatalog(unittest.TestCase):
         errors = []
         # Create a zip with 11MB of uncompressed data
         big_data = b"0" * (11 * 1024 * 1024)
-        zip_bytes = _create_zip_bytes({"big.txt": big_data})
+        zip_bytes = _create_zip_bytes([("big.txt", big_data)])
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".eli-pack") as tmp:
             tmp.write(zip_bytes)
@@ -159,6 +161,26 @@ class TestValidateCatalog(unittest.TestCase):
             pack = {"pack_id": "test.pack", "version": "1.0.0", "content_type": "pack"}
             _inspect_archive_and_manifest(tmp_path, pack, "test.pack", errors)
             self.assertTrue(any("exceeds limit of 10485760 bytes" in e for e in errors))
+        finally:
+            tmp_path.unlink()
+
+    def test_archive_inspection_duplicate_entries(self):
+        errors = []
+        # Create zip with duplicate file path entries
+        zip_bytes = _create_zip_bytes([
+            ("manifest.json", '{"pack_id": "test.pack", "pack_version": "1.0.0", "content_type": "pack"}'),
+            ("file.txt", "content 1"),
+            ("file.txt", "content 2"),
+        ])
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".eli-pack") as tmp:
+            tmp.write(zip_bytes)
+            tmp_path = Path(tmp.name)
+
+        try:
+            pack = {"pack_id": "test.pack", "version": "1.0.0", "content_type": "pack"}
+            _inspect_archive_and_manifest(tmp_path, pack, "test.pack", errors)
+            self.assertTrue(any("duplicate archive entry path 'file.txt'" in e for e in errors))
         finally:
             tmp_path.unlink()
 
@@ -173,7 +195,7 @@ class TestValidateCatalog(unittest.TestCase):
         ]
         for path in unsafe_paths:
             errors = []
-            zip_bytes = _create_zip_bytes({path: "data", "manifest.json": "{}"})
+            zip_bytes = _create_zip_bytes([(path, "data"), ("manifest.json", "{}")])
             with tempfile.NamedTemporaryFile(delete=False, suffix=".eli-pack") as tmp:
                 tmp.write(zip_bytes)
                 tmp_path = Path(tmp.name)
@@ -191,7 +213,7 @@ class TestValidateCatalog(unittest.TestCase):
     def test_archive_inspection_missing_or_duplicate_manifest(self):
         # Missing manifest
         errors = []
-        zip_bytes = _create_zip_bytes({"content.json": "{}"})
+        zip_bytes = _create_zip_bytes([("content.json", "{}")])
         with tempfile.NamedTemporaryFile(delete=False, suffix=".eli-pack") as tmp:
             tmp.write(zip_bytes)
             tmp_path = Path(tmp.name)
@@ -206,7 +228,7 @@ class TestValidateCatalog(unittest.TestCase):
     def test_archive_inspection_oversized_manifest(self):
         errors = []
         big_manifest = json.dumps({"pack_id": "test.pack", "version": "1.0.0", "data": "a" * 70000})
-        zip_bytes = _create_zip_bytes({"manifest.json": big_manifest})
+        zip_bytes = _create_zip_bytes([("manifest.json", big_manifest)])
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".eli-pack") as tmp:
             tmp.write(zip_bytes)
@@ -239,7 +261,7 @@ class TestValidateCatalog(unittest.TestCase):
 
         # Invalid JSON
         errors = []
-        zip_bytes = _create_zip_bytes({"manifest.json": "{ invalid json"})
+        zip_bytes = _create_zip_bytes([("manifest.json", "{ invalid json")])
         with tempfile.NamedTemporaryFile(delete=False, suffix=".eli-pack") as tmp:
             tmp.write(zip_bytes)
             tmp_path = Path(tmp.name)
@@ -253,7 +275,7 @@ class TestValidateCatalog(unittest.TestCase):
 
         # JSON array instead of JSON object
         errors = []
-        zip_bytes = _create_zip_bytes({"manifest.json": "[]"})
+        zip_bytes = _create_zip_bytes([("manifest.json", "[]")])
         with tempfile.NamedTemporaryFile(delete=False, suffix=".eli-pack") as tmp:
             tmp.write(zip_bytes)
             tmp_path = Path(tmp.name)
@@ -274,7 +296,7 @@ class TestValidateCatalog(unittest.TestCase):
 
         # pack_id mismatch
         errors = []
-        zip_bytes = _create_zip_bytes({"manifest.json": json.dumps(valid_manifest)})
+        zip_bytes = _create_zip_bytes([("manifest.json", json.dumps(valid_manifest))])
         with tempfile.NamedTemporaryFile(delete=False, suffix=".eli-pack") as tmp:
             tmp.write(zip_bytes)
             tmp_path = Path(tmp.name)
@@ -314,6 +336,59 @@ class TestValidateCatalog(unittest.TestCase):
 
     def test_main_valid_catalog(self):
         self.assertEqual(main(), 0)
+
+    def test_main_paid_linkout_valid(self):
+        catalog_data = {
+            "schema_version": 1,
+            "packs": [
+                {
+                    "pack_id": "test.paid",
+                    "title": "Paid Pack",
+                    "author": "Author",
+                    "description": "Desc",
+                    "version": "1.0.0",
+                    "min_eli_version": "2026.01.01",
+                    "content_type": "pack",
+                    "paid": True,
+                    "store_url": "https://store.example.com/pack",
+                }
+            ],
+        }
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write(json.dumps(catalog_data))
+            tmp_path = Path(tmp.name)
+
+        try:
+            with patch("scripts.validate_catalog.CATALOG", tmp_path):
+                self.assertEqual(main(), 0)
+        finally:
+            tmp_path.unlink()
+
+    def test_main_incomplete_free_entry(self):
+        catalog_data = {
+            "schema_version": 1,
+            "packs": [
+                {
+                    "pack_id": "test.free",
+                    "title": "Free Pack",
+                    "author": "Author",
+                    "description": "Desc",
+                    "version": "1.0.0",
+                    "min_eli_version": "2026.01.01",
+                    "content_type": "pack",
+                    # Missing download_url and sha256
+                }
+            ],
+        }
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write(json.dumps(catalog_data))
+            tmp_path = Path(tmp.name)
+
+        try:
+            with patch("scripts.validate_catalog.CATALOG", tmp_path):
+                self.assertEqual(main(), 1)
+        finally:
+            tmp_path.unlink()
 
     def test_main_invalid_json(self):
         with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:

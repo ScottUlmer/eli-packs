@@ -6,7 +6,7 @@ submission can't be merged. Checks:
   1. community-packs.json is valid JSON and matches schema/community-packs.schema.json.
   2. pack_id is unique across the catalog (anti-typosquat / de-dupe).
   3. version is unique per pack_id (no two identical pack_id+version entries).
-  4. download_url is https only (no plaintext, no other schemes).
+  4. download_url / store_url are https only (no plaintext, no other schemes).
   5. For packs hosted in THIS repo (ScottUlmer/eli-packs download_url pointing to packs/<filename>),
      the catalog sha256 + size_bytes must match the actual file bytes. Done against the local repo
      file (no network), so it is deterministic and works on PRs before merge.
@@ -24,7 +24,7 @@ import re
 import sys
 import zipfile
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote
 
 try:
     from jsonschema import Draft7Validator
@@ -37,6 +37,10 @@ CATALOG = ROOT / "community-packs.json"
 SCHEMA = ROOT / "schema" / "community-packs.schema.json"
 PACKS_DIR = ROOT / "packs"
 
+# Policy Limits:
+# These caps act as upper security and resource sanity bounds to prevent DoS, zip bombs,
+# or malformed metadata during automated validation, rather than representing hard limits
+# of the ELI pack specification itself.
 MAX_ZIP_ENTRIES = 100
 MAX_UNCOMPRESSED_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_MANIFEST_SIZE_BYTES = 64 * 1024  # 64 KB
@@ -123,8 +127,8 @@ def _inspect_archive_and_manifest(local_file: Path, pack: dict, pack_id: str, er
     """Perform bounded no-extraction archive inspection and catalog metadata verification."""
     try:
         zf = zipfile.ZipFile(local_file, "r")
-    except Exception as exc:  # noqa: BLE001
-        errors.append(f"'{pack_id}': failed to open zip archive {local_file.name}: {exc}")
+    except Exception:  # noqa: BLE001
+        errors.append(f"'{pack_id}': failed to open zip archive {local_file.name}: invalid or corrupt archive")
         return
 
     with zf:
@@ -190,8 +194,8 @@ def _inspect_archive_and_manifest(local_file: Path, pack: dict, pack_id: str, er
 
         try:
             manifest_bytes = zf.read(manifest_info)
-        except Exception as exc:  # noqa: BLE001
-            errors.append(f"'{pack_id}': failed reading manifest.json: {exc}")
+        except Exception:  # noqa: BLE001
+            errors.append(f"'{pack_id}': failed reading manifest.json")
             return
 
         try:
@@ -202,8 +206,8 @@ def _inspect_archive_and_manifest(local_file: Path, pack: dict, pack_id: str, er
 
         try:
             manifest = json.loads(manifest_text)
-        except Exception as exc:  # noqa: BLE001
-            errors.append(f"'{pack_id}': manifest.json is not valid JSON: {exc}")
+        except Exception:  # noqa: BLE001
+            errors.append(f"'{pack_id}': manifest.json is not valid JSON")
             return
 
         if not isinstance(manifest, dict):
@@ -239,11 +243,21 @@ def _inspect_archive_and_manifest(local_file: Path, pack: dict, pack_id: str, er
 def _check_entry_integrity(pack: dict, index: int, errors: list) -> None:
     pack_id = pack.get("pack_id", f"(entry #{index})")
     download_url = pack.get("download_url", "")
+    store_url = pack.get("store_url", "")
+    is_paid = bool(pack.get("paid", False))
 
-    # Bytes-serving entries: require https.
+    # A link-out paid entry ships no bytes: just require an https store_url.
+    if is_paid and not download_url:
+        if not isinstance(store_url, str) or not store_url.startswith("https://"):
+            errors.append(f"'{pack_id}': paid link-out entry needs an https store_url")
+        return
+
+    # Bytes-serving entries (free or ownership-gated paid): require https.
     if not isinstance(download_url, str) or not download_url.startswith("https://"):
         errors.append(f"'{pack_id}': download_url must be an https:// URL")
         return
+    if store_url and not store_url.startswith("https://"):
+        errors.append(f"'{pack_id}': store_url must be an https:// URL")
 
     # Verify the checksum and archive structure when hosted in this repo.
     local_file, repo_err = _local_file_for_url(download_url)
