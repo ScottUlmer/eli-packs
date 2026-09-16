@@ -6,7 +6,7 @@ submission can't be merged. Checks:
   1. community-packs.json is valid JSON and matches schema/community-packs.schema.json.
   2. pack_id is unique across the catalog (anti-typosquat / de-dupe).
   3. version is unique per pack_id (no two identical pack_id+version entries).
-  4. download_url / store_url are https only (no plaintext, no other schemes).
+  4. download_url is https only (no plaintext, no other schemes).
   5. For packs hosted in THIS repo (a download_url whose file lives under packs/),
      the catalog sha256 + size_bytes must match the actual file bytes. This is the
      integrity guarantee ELI relies on at download time. Done against the local repo
@@ -59,21 +59,10 @@ def _local_file_for_url(url: str):
 def _check_entry_integrity(pack: dict, index: int, errors: list) -> None:
     pack_id = pack.get("pack_id", f"(entry #{index})")
     download_url = pack.get("download_url", "")
-    store_url = pack.get("store_url", "")
-    is_paid = bool(pack.get("paid", False))
 
-    # A link-out paid entry ships no bytes: just require an https store_url.
-    if is_paid and not download_url:
-        if not isinstance(store_url, str) or not store_url.startswith("https://"):
-            errors.append(f"'{pack_id}': paid link-out entry needs an https store_url")
-        return
-
-    # Bytes-serving entries (free or ownership-gated paid): require https.
     if not isinstance(download_url, str) or not download_url.startswith("https://"):
         errors.append(f"'{pack_id}': download_url must be an https:// URL")
         return
-    if store_url and not store_url.startswith("https://"):
-        errors.append(f"'{pack_id}': store_url must be an https:// URL")
 
     # Verify the checksum against the actual file when it's hosted in this repo.
     local_file = _local_file_for_url(download_url)
