@@ -33,6 +33,14 @@ SCHEMA = ROOT / "schema" / "community-packs.schema.json"
 PACKS_DIR = ROOT / "packs"
 
 
+def _load_json(path: Path, label: str):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: {label} is not valid JSON: {exc}")
+        return None
+
+
 def _sha256_of_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -101,16 +109,12 @@ def _check_entry_integrity(pack: dict, index: int, errors: list) -> None:
 def main() -> int:
     errors: list[str] = []
 
-    try:
-        catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: community-packs.json is not valid JSON: {exc}")
+    catalog = _load_json(CATALOG, "community-packs.json")
+    if catalog is None:
         return 1
 
-    try:
-        schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: schema is not valid JSON: {exc}")
+    schema = _load_json(SCHEMA, "schema")
+    if schema is None:
         return 1
 
     validator = Draft7Validator(schema)

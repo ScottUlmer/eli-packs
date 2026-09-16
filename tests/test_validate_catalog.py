@@ -8,6 +8,7 @@ from unittest.mock import patch
 # Import functions from validate_catalog
 from scripts.validate_catalog import (
     _check_entry_integrity,
+    _load_json,
     _local_file_for_url,
     _sha256_of_file,
     main,
@@ -83,6 +84,22 @@ class TestValidateCatalog(unittest.TestCase):
     def test_main_valid_catalog(self):
         self.assertEqual(main(), 0)
 
+    def test_load_json_valid_and_invalid(self):
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write('{"key": "value"}')
+            valid_path = Path(tmp.name)
+
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write("{ invalid json")
+            invalid_path = Path(tmp.name)
+
+        try:
+            self.assertEqual(_load_json(valid_path, "test"), {"key": "value"})
+            self.assertIsNone(_load_json(invalid_path, "test"))
+        finally:
+            valid_path.unlink()
+            invalid_path.unlink()
+
     def test_main_invalid_json(self):
         with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
             tmp.write("{ invalid json")
@@ -90,6 +107,17 @@ class TestValidateCatalog(unittest.TestCase):
 
         try:
             with patch("scripts.validate_catalog.CATALOG", tmp_path):
+                self.assertEqual(main(), 1)
+        finally:
+            tmp_path.unlink()
+
+    def test_main_invalid_schema_json(self):
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            tmp.write("{ invalid json")
+            tmp_path = Path(tmp.name)
+
+        try:
+            with patch("scripts.validate_catalog.SCHEMA", tmp_path):
                 self.assertEqual(main(), 1)
         finally:
             tmp_path.unlink()
