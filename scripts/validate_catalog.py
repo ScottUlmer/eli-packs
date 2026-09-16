@@ -81,20 +81,21 @@ def _check_entry_integrity(pack: dict, index: int, errors: list) -> None:
         print(f"  note: '{pack_id}' is hosted externally — bytes not verified by CI (ELI verifies on download).")
         return
 
-    actual_sha256 = _sha256_of_file(local_file)
-    expected_sha256 = str(pack.get("sha256", "")).lower()
-    if actual_sha256 != expected_sha256:
-        errors.append(
-            f"'{pack_id}': sha256 mismatch — catalog says {expected_sha256 or '(none)'}, "
-            f"{local_file.name} is {actual_sha256}"
-        )
-
     expected_size = pack.get("size_bytes")
     actual_size = local_file.stat().st_size
     if isinstance(expected_size, int) and expected_size != actual_size:
         errors.append(
             f"'{pack_id}': size_bytes mismatch — catalog says {expected_size}, "
             f"{local_file.name} is {actual_size}"
+        )
+        return
+
+    actual_sha256 = _sha256_of_file(local_file)
+    expected_sha256 = str(pack.get("sha256", "")).lower()
+    if actual_sha256 != expected_sha256:
+        errors.append(
+            f"'{pack_id}': sha256 mismatch — catalog says {expected_sha256 or '(none)'}, "
+            f"{local_file.name} is {actual_sha256}"
         )
 
 

@@ -69,6 +69,7 @@ class TestValidateCatalog(unittest.TestCase):
         self.assertTrue(any("download_url must be an https:// URL" in e for e in errors))
 
     def test_check_entry_integrity_sha256_size_mismatch(self):
+        # Size mismatch returns early with size_bytes mismatch and avoids sha256 hashing
         errors = []
         entry = {
             "pack_id": "eli.dnd-srd",
@@ -77,8 +78,17 @@ class TestValidateCatalog(unittest.TestCase):
             "size_bytes": 1,
         }
         _check_entry_integrity(entry, 0, errors)
-        self.assertTrue(any("sha256 mismatch" in e for e in errors))
         self.assertTrue(any("size_bytes mismatch" in e for e in errors))
+        self.assertFalse(any("sha256 mismatch" in e for e in errors))
+
+        # Matching size with mismatched sha256 should report sha256 mismatch
+        dnd_file = _local_file_for_url(entry["download_url"])
+        actual_size = dnd_file.stat().st_size
+        errors.clear()
+        entry["size_bytes"] = actual_size
+        _check_entry_integrity(entry, 0, errors)
+        self.assertTrue(any("sha256 mismatch" in e for e in errors))
+        self.assertFalse(any("size_bytes mismatch" in e for e in errors))
 
     def test_main_valid_catalog(self):
         self.assertEqual(main(), 0)
