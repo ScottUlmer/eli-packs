@@ -19,8 +19,23 @@
 			"additionalProperties": false,
 			"required": [
 				"pack_id", "title", "author", "description", "version",
-				"min_eli_version", "content_type", "download_url", "sha256"
+				"min_eli_version", "content_type"
 			],
+			"if": {
+				"properties": {
+					"paid": { "const": true }
+				},
+				"required": ["paid"]
+			},
+			"then": {
+				"oneOf": [
+					{ "required": ["download_url", "sha256"] },
+					{ "required": ["store_url"] }
+				]
+			},
+			"else": {
+				"required": ["download_url", "sha256"]
+			},
 			"properties": {
 				"pack_id": {
 					"type": "string",
@@ -46,6 +61,15 @@
 					"description": "SHA-256 of the .eli-pack file. ELI verifies the download against this."
 				},
 				"size_bytes": { "type": "integer", "minimum": 0 },
+				"paid": {
+					"type": "boolean",
+					"description": "True if this is a paid entry."
+				},
+				"store_url": {
+					"type": "string",
+					"pattern": "^https://",
+					"description": "Store page URL for paid packs."
+				},
 				"homepage": { "type": "string", "pattern": "^https://" },
 				"license": { "type": "string", "maxLength": 80 },
 				"tags": {
