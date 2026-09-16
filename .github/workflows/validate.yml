@@ -1,29 +1,42 @@
 name: Validate catalog
 
-# Runs the validator on every PR and on pushes to main that touch the catalog,
-# schema, or scripts. A red X here means the catalog has a problem; merge only on green.
+# Runs the validator and unit tests on every PR and on pushes to main that touch the catalog,
+# schema, scripts, tests, requirements, or workflow configuration.
+# A red X here means the catalog or validator tests have a problem; merge only on green.
 on:
   pull_request:
     paths:
       - "community-packs.json"
       - "schema/**"
       - "scripts/**"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/validate.yml"
   push:
     branches: [main]
     paths:
       - "community-packs.json"
       - "schema/**"
       - "scripts/**"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/validate.yml"
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install jsonschema
+        run: pip install --require-hashes -r requirements.txt
+      - name: Run validator unit tests
+        run: python -m unittest discover -s tests -v
       - name: Validate community-packs.json
         run: python scripts/validate_catalog.py
