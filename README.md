@@ -1,6 +1,6 @@
 # ELI community packs
 
-This is the catalog for the in-app pack browser ("Workshop") in [ELI](https://github.com/ScottUlmer), my collaborative worldbuilding notebook for TTRPGs and fiction.
+This is the catalog for the in-app pack browser ("Workshop") in [ELI](https://github.com/ScottUlmer/ELI), my collaborative worldbuilding notebook for TTRPGs and fiction.
 
 An `.eli-pack` is a single file that bundles templates, entities, and the images they use. It is **plain data only** - a pack can't contain anything that runs, so importing one is safe. ELI reads the catalog in this repo and lets people browse and install the packs listed here.
 
